@@ -15,6 +15,7 @@ require 'support/matchers/schema'
 require 'support/matchers/table'
 require 'support/matchers/column'
 require 'support/matchers/index'
+require 'support/matchers/unique_index'
 require 'support/matchers/function'
 require 'support/matchers/source'
 require 'support/aruba'
@@ -41,6 +42,7 @@ RSpec.configure do |config|
   config.include(ChronoTest::Matchers::Table)
   config.include(ChronoTest::Matchers::Column)
   config.include(ChronoTest::Matchers::Index)
+  config.include(ChronoTest::Matchers::UniqueIndex)
   config.include(ChronoTest::Matchers::Function)
   config.include(ChronoTest::Matchers::Source)
   config.include(ChronoTest::Aruba, type: :aruba)
