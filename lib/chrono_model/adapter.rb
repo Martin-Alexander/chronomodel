@@ -15,6 +15,8 @@ module ChronoModel
   # adapter for a clean override of its methods using super.
   #
   class Adapter < ActiveRecord::ConnectionAdapters::PostgreSQLAdapter
+    alias parent_add_index add_index
+
     include ChronoModel::Adapter::Migrations
     include ChronoModel::Adapter::DDL
     include ChronoModel::Adapter::Indexes

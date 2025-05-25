@@ -6,7 +6,7 @@ module ChronoModel
       # Creates the given table, possibly creating the temporal schema
       # objects if the `:temporal` option is given and set to true.
       #
-      def create_table(table_name, **options)
+      def create_table(table_name, **options, &block)
         # No temporal features requested, skip
         return super unless options[:temporal]
 
@@ -19,7 +19,16 @@ module ChronoModel
 
         transaction do
           on_temporal_schema { super }
-          on_history_schema { chrono_history_table_ddl(table_name) }
+          on_history_schema do
+            chrono_history_table_ddl(table_name)
+
+            td = build_create_table_definition(table_name, **options, &block)
+
+            td.indexes.each do |column_name, index_options|
+              index_options = index_options.dup.tap { |o| o.delete(:unique) } if index_options[:unique].present?
+              parent_add_index(table_name, column_name, **index_options, if_not_exists: td.if_not_exists)
+            end
+          end
 
           chrono_public_view_ddl(table_name, options)
         end

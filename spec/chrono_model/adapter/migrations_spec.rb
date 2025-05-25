@@ -48,6 +48,63 @@ RSpec.describe ChronoModel::Adapter do
 
       it_behaves_like 'plain table'
     end
+
+    context 'when #index and #references is called on the table definition' do
+      let(:columns) do
+        native = [['foo', 'character varying']]
+
+        def native.to_proc
+          proc { |t|
+            t.string :foo
+            t.string :baz
+            t.string :tar
+
+            t.index :foo
+            t.index :baz, name: 'baz_index'
+            t.index %i[foo baz], name: 'foo_baz_index'
+            t.references :bar, index: true
+            t.index :tar, unique: true
+          }
+        end
+
+        native
+      end
+
+      context 'with temporal tables' do
+        include_context 'with temporal tables'
+
+        it_behaves_like 'temporal table'
+
+        it { is_expected.to have_temporal_index "index_#{table}_on_foo",    %w[foo] }
+        it { is_expected.to have_history_index  "index_#{table}_on_foo",    %w[foo] }
+        it { is_expected.to have_temporal_index 'baz_index',                %w[baz] }
+        it { is_expected.to have_history_index  'baz_index',                %w[baz] }
+        it { is_expected.to have_temporal_index 'foo_baz_index',            %w[foo baz] }
+        it { is_expected.to have_history_index  'foo_baz_index',            %w[foo baz] }
+        it { is_expected.to have_temporal_index "index_#{table}_on_bar_id", %w[bar_id] }
+        it { is_expected.to have_history_index  "index_#{table}_on_bar_id", %w[bar_id] }
+        it { is_expected.to have_temporal_unique_index    "index_#{table}_on_tar", %w[tar] }
+        it { is_expected.not_to have_history_unique_index "index_#{table}_on_tar", %w[tar] }
+
+        it { is_expected.not_to have_index "index_#{table}_on_foo",    %w[foo] }
+        it { is_expected.not_to have_index 'baz_index',                %w[baz] }
+        it { is_expected.not_to have_index 'foo_baz_index',            %w[foo baz] }
+        it { is_expected.not_to have_index "index_#{table}_on_bar_id", %w[bar_id] }
+        it { is_expected.not_to have_index "index_#{table}_on_tar",    %w[tar] }
+      end
+
+      context 'with plain tables' do
+        include_context 'with plain tables'
+
+        it_behaves_like 'plain table'
+
+        it { is_expected.to have_index "index_#{table}_on_foo",    %w[foo] }
+        it { is_expected.to have_index 'baz_index',                %w[baz] }
+        it { is_expected.to have_index 'foo_baz_index',            %w[foo baz] }
+        it { is_expected.to have_index "index_#{table}_on_bar_id", %w[bar_id] }
+        it { is_expected.to have_unique_index "index_#{table}_on_tar", %w[tar] }
+      end
+    end
   end
 
   describe '.rename_table' do
@@ -243,6 +300,7 @@ RSpec.describe ChronoModel::Adapter do
         adapter.add_index table, %i[foo bar], name: 'foobar_index'
         adapter.add_index table, [:test], name: 'test_index'
         adapter.add_index table, :baz
+        adapter.add_index table, %i[foo baz], name: 'foobaz_index', unique: true
       end
 
       it { is_expected.to have_temporal_index 'foobar_index', %w[foo bar] }
@@ -251,10 +309,12 @@ RSpec.describe ChronoModel::Adapter do
       it { is_expected.to have_history_index  'test_index',   %w[test] }
       it { is_expected.to have_temporal_index 'index_test_table_on_baz', %w[baz] }
       it { is_expected.to have_history_index  'index_test_table_on_baz', %w[baz] }
+      it { is_expected.to have_temporal_unique_index 'foobaz_index', %w[foo baz] }
 
       it { is_expected.not_to have_index 'foobar_index', %w[foo bar] }
       it { is_expected.not_to have_index 'test_index',   %w[test] }
       it { is_expected.not_to have_index 'index_test_table_on_baz', %w[baz] }
+      it { is_expected.not_to have_history_unique_index 'foobaz_index', %w[foo baz] }
     end
 
     context 'with plain tables' do
